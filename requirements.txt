@@ -1,0 +1,9 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+sqlalchemy>=2.0
+pydantic>=2.6
+email-validator>=2.1
+PyJWT>=2.7
+psycopg2-binary>=2.9   # untuk PostgreSQL (production)
+pytest>=8
+httpx>=0.27

@@ -1,0 +1,18 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: pmcontrol
+      POSTGRES_USER: pmcontrol
+      POSTGRES_PASSWORD: pmcontrol
+    volumes: [pgdata:/var/lib/postgresql/data]
+    ports: ["5432:5432"]
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg2://pmcontrol:pmcontrol@db:5432/pmcontrol
+      JWT_SECRET: ganti-dengan-secret-panjang-acak
+    ports: ["8000:8000"]
+    depends_on: [db]
+volumes:
+  pgdata:

@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Control — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --ink:#13233A; --ink2:#4A5B70; --paper:#EEF2F5; --surface:#FFFFFF; --line:#D6DEE6;
+  --pv:#3563C9; --ev:#0F8A6C; --ac:#D2553A;
+  --green:#0F8A6C; --amber:#C98A0B; --red:#C23B3B; --grey:#8B97A5;
+  --r-lg:10px; --r-sm:6px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font:15px/1.5 "Public Sans",system-ui,sans-serif;color:var(--ink);background:var(--paper);font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:"Archivo",sans-serif;margin:0;letter-spacing:-.01em}
+h1{font-size:22px;font-weight:800} h2{font-size:18px;font-weight:700} h3{font-size:15px;font-weight:700}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:#fff;padding:7px 14px;border-radius:var(--r-sm);font-weight:600}
+button.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+button.danger{background:var(--red);border-color:var(--red)}
+button:focus-visible,input:focus-visible,select:focus-visible,.proj:focus-visible{outline:3px solid var(--pv);outline-offset:2px}
+input,select{border:1px solid var(--line);border-radius:var(--r-sm);padding:7px 10px;background:#fff;width:100%}
+label{display:block;font-size:13px;color:var(--ink2);font-weight:600;margin-bottom:4px}
+.muted{color:var(--ink2)} .small{font-size:13px}
+.hidden{display:none!important}
+
+/* Login */
+#login{min-height:100%;display:grid;place-items:center;padding:24px}
+#login form{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:32px;width:min(380px,100%);display:grid;gap:14px}
+#login .err{color:var(--red);font-size:14px;min-height:20px}
+
+/* Shell */
+#app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:auto 1fr;min-height:100%}
+header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;background:var(--ink);color:#fff}
+header .who{font-size:14px;opacity:.85}
+header button{background:transparent;border-color:rgba(255,255,255,.4)}
+aside{border-right:1px solid var(--line);background:var(--surface);padding:16px;overflow:auto}
+main{padding:24px;overflow:auto;display:grid;gap:20px;align-content:start;max-width:1400px}
+.proj{display:grid;grid-template-columns:6px 1fr auto;gap:12px;align-items:center;padding:10px 12px 10px 0;border-radius:var(--r-sm);cursor:pointer;border:1px solid transparent}
+.proj:hover{background:var(--paper)} .proj.active{border-color:var(--ink);background:var(--paper)}
+.proj .bar{align-self:stretch;border-radius:0 4px 4px 0}
+.proj .code{font-weight:700;font-size:14px} .proj .nm{font-size:13px;color:var(--ink2)}
+.proj .idx{font-size:12px;text-align:right;color:var(--ink2)}
+.bg-green{background:var(--green)} .bg-amber{background:var(--amber)} .bg-red{background:var(--red)} .bg-grey{background:var(--grey)}
+.c-green{color:var(--green)} .c-amber{color:var(--amber)} .c-red{color:var(--red)} .c-grey{color:var(--grey)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px}
+.panel > h2,.panel > h3{margin-bottom:12px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px}
+
+/* Signature: indeks performa besar */
+.perf{display:grid;grid-template-columns:auto auto 1fr;gap:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);overflow:hidden}
+.perf .ix{padding:18px 28px;border-right:1px solid var(--line)}
+.perf .ix .v{font-family:"Archivo",sans-serif;font-weight:800;font-size:56px;line-height:1}
+.perf .ix .l{font-size:13px;color:var(--ink2);margin-top:6px}
+.perf .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));padding:14px 20px;gap:10px 20px;align-content:center}
+.kv div b{display:block;font-size:17px;font-family:"Archivo",sans-serif} .kv div span{font-size:12px;color:var(--ink2)}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:600;color:var(--ink2);font-size:12.5px;border-bottom:1px solid var(--line);padding:8px 10px}
+td{border-bottom:1px solid var(--line);padding:8px 10px;vertical-align:top}
+td.n,th.n{text-align:right;white-space:nowrap}
+.scroll{overflow-x:auto}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:6px}
+td.nw{white-space:nowrap}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;color:#fff}
+.alert{display:grid;grid-template-columns:8px 1fr;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.alert:last-child{border-bottom:0}
+.alert .dot{width:8px;height:8px;border-radius:50%;margin-top:7px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tabs button{background:none;border:0;border-bottom:3px solid transparent;border-radius:0;color:var(--ink2);padding:8px 12px}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--ink)}
+.impact{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:14px}
+.impact div{border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px}
+.impact b{display:block;font-family:"Archivo",sans-serif;font-size:16px}
+.flag{color:var(--red);font-weight:600;font-size:14px;margin-top:10px}
+.empty{padding:28px;text-align:center;color:var(--ink2)}
+.lens td.l{color:var(--ink2);font-size:13px}
+.sub{margin:22px 0 10px}
+.chip{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid var(--line);white-space:nowrap}
+.chip.overdue,.chip.disputed,.chip.rejected{border-color:var(--red);color:var(--red)}
+.chip.paid,.chip.accepted,.chip.approved{border-color:var(--green);color:var(--green)}
+.chip.due,.chip.partially_paid,.chip.pending_finance,.chip.pending_management{border-color:var(--amber);color:var(--amber)}
+.est td{vertical-align:middle}
+.est tr.w td{background:var(--paper);font-weight:600}
+.est input.cell{width:92px;padding:4px 6px;text-align:right}
+.est .kind{font-size:11px;color:var(--ink2);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-right:6px}
+.ctl{display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:14px}
+.ctl > div{flex:0 1 130px}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:6px 0 16px}
+.sum div{border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 12px}
+.sum b{display:block;font-family:"Archivo",sans-serif;font-size:16px}
+.sum .hl{border-color:var(--ink);background:var(--paper)}
+#toast{position:fixed;bottom:20px;right:20px;background:var(--ink);color:#fff;padding:10px 16px;border-radius:var(--r-sm);opacity:0;transition:opacity .2s}
+#toast.show{opacity:1}
+@media (max-width:860px){#app{grid-template-columns:1fr} aside{border-right:0;border-bottom:1px solid var(--line);max-height:260px}
+ .perf{grid-template-columns:1fr 1fr} .perf .kv{grid-column:1/-1;border-top:1px solid var(--line)} .grid2{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<section id="login">
+  <form id="loginForm">
+    <h1>Project Control</h1>
+    <p class="muted small" style="margin:0">Masuk untuk melihat kesehatan biaya dan jadwal project.</p>
+    <div><label for="em">Email</label><input id="em" type="email" required autocomplete="username"></div>
+    <div><label for="pw">Password</label><input id="pw" type="password" required autocomplete="current-password"></div>
+    <div class="err" id="loginErr" role="alert"></div>
+    <button type="submit">Masuk</button>
+  </form>
+</section>
+
+<div id="app" class="hidden">
+  <header>
+    <h1>Project Control</h1>
+    <div class="row" style="align-items:center"><span class="who" id="who"></span><button id="logout">Keluar</button></div>
+  </header>
+  <aside>
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h3>Project aktif</h3><button class="ghost small" id="btnOverview">Ringkasan</button>
+    </div>
+    <div id="projList"></div>
+  </aside>
+  <main id="main"></main>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+let TOKEN = localStorage.getItem("pmc_token"), ME = null, DASH = null, charts = [];
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num = v => v == null ? null : Number(v);
+function rp(v, full) {
+  if (v == null) return "–";
+  const n = Number(v), a = Math.abs(n), s = n < 0 ? "−" : "";
+  if (full) return s + "Rp" + a.toLocaleString("id-ID", {maximumFractionDigits: 0});
+  if (a >= 1e9) return s + "Rp" + (a/1e9).toLocaleString("id-ID",{maximumFractionDigits:2}) + " M";
+  if (a >= 1e6) return s + "Rp" + (a/1e6).toLocaleString("id-ID",{maximumFractionDigits:1}) + " jt";
+  return s + "Rp" + Math.round(a).toLocaleString("id-ID");
+}
+const ix = v => v == null ? "–" : Number(v).toLocaleString("id-ID",{minimumFractionDigits:2,maximumFractionDigits:2});
+const pct = v => v == null ? "–" : (Number(v)*100).toLocaleString("id-ID",{maximumFractionDigits:1}) + "%";
+const hcls = v => v == null ? "grey" : v >= .95 ? "green" : v >= .9 ? "amber" : "red";
+function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2600); }
+
+async function api(path, opt = {}) {
+  const r = await fetch(path, {...opt, headers: {"Content-Type":"application/json", ...(TOKEN?{Authorization:"Bearer "+TOKEN}:{})}});
+  if (r.status === 401) { logout(); throw new Error("Sesi berakhir, silakan masuk lagi"); }
+  const body = r.status === 204 ? null : await r.json().catch(() => null);
+  if (!r.ok) {
+    const d = body?.detail;
+    const msg = typeof d === "string" ? d : d?.message ? d.message + ": " + (d.issues||[]).join("; ") : Array.isArray(d) ? d.map(x=>x.msg).join("; ") : "Permintaan gagal ("+r.status+")";
+    const e = new Error(msg); e.status = r.status; throw e;
+  }
+  return body;
+}
+const post = (p, b) => api(p, {method:"POST", body: JSON.stringify(b || {})});
+
+// ---------- Auth ----------
+$("#loginForm").onsubmit = async e => {
+  e.preventDefault(); $("#loginErr").textContent = "";
+  try { TOKEN = (await post("/api/auth/login", {email: $("#em").value, password: $("#pw").value})).access_token;
+        localStorage.setItem("pmc_token", TOKEN); await boot(); }
+  catch (err) { $("#loginErr").textContent = err.message; }
+};
+function logout(){ TOKEN = null; localStorage.removeItem("pmc_token"); $("#app").classList.add("hidden"); $("#login").classList.remove("hidden"); }
+$("#logout").onclick = logout;
+$("#btnOverview").onclick = () => renderOverview();
+
+async function boot() {
+  ME = await api("/api/auth/me");
+  $("#who").textContent = ME.full_name + " · " + ME.role;
+  $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
+  await loadDash(); renderOverview();
+}
+const canManage = () => ["admin","management","pm"].includes(ME.role);
+const canApproveCR = () => ["admin","management"].includes(ME.role);
+const canFin = () => ["admin","finance"].includes(ME.role);
+const canSell = () => ["admin","management","sales","pm"].includes(ME.role);
+
+async function loadDash() {
+  DASH = await api("/api/dashboard");
+  const list = $("#projList");
+  if (ME.role === "staff") { list.innerHTML = '<p class="muted small">Tugas Anda tampil di ringkasan.</p>'; return; }
+  list.innerHTML = DASH.projects.length ? DASH.projects.map(p => `
+    <div class="proj" tabindex="0" data-id="${p.id}">
+      <div class="bar bg-${p.health}"></div>
+      <div><div class="code">${esc(p.code)}</div><div class="nm">${esc(p.name)}</div></div>
+      <div class="idx">CPI ${ix(p.cpi)}<br>SPI ${ix(p.spi)}</div>
+    </div>`).join("") : '<p class="muted small">Belum ada project aktif.</p>';
+  list.querySelectorAll(".proj").forEach(el => {
+    el.onclick = () => openProject(+el.dataset.id);
+    el.onkeydown = e => { if (e.key === "Enter") openProject(+el.dataset.id); };
+  });
+}
+function markActive(id){ document.querySelectorAll(".proj").forEach(el => el.classList.toggle("active", +el.dataset.id === id)); }
+function killCharts(){ charts.forEach(c => c.destroy()); charts = []; }
+
+// ---------- Overview ----------
+function renderOverview() {
+  killCharts(); markActive(null);
+  const m = $("#main");
+  if (ME.role === "staff") {
+    m.innerHTML = `<div class="panel"><h2>Tugas saya</h2>${DASH.my_tasks.length ? `<div class="scroll"><table>
+      <tr><th>Task</th><th>Status</th><th class="n">Progress</th><th>Tenggat</th></tr>
+      ${DASH.my_tasks.map(t=>`<tr><td>${esc(t.name)}</td><td>${esc(t.status)}</td><td class="n">${Number(t.progress_pct)}%</td>
+      <td class="${t.overdue?'c-red':''}">${t.planned_end||"–"}${t.overdue?" (terlambat)":""}</td></tr>`).join("")}</table></div>`
+      : '<div class="empty">Tidak ada tugas terbuka.</div>'}</div>`;
+    return;
+  }
+  const pf = DASH.portfolio;
+  m.innerHTML = `
+    ${pf ? `<div class="perf">
+      <div class="ix"><div class="v c-${pf.projects_at_risk ? 'red' : 'green'}">${pf.projects_at_risk}</div><div class="l">project berisiko (merah)</div></div>
+      <div class="ix"><div class="v">${pf.active_projects}</div><div class="l">project aktif</div></div>
+      <div class="kv">
+        <div><b>${rp(pf.revenue)}</b><span>Revenue kontrak + CR</span></div>
+        <div><b>${rp(pf.bac)}</b><span>Total BAC</span></div>
+        <div><b>${rp(pf.ac)}</b><span>Actual cost</span></div>
+        <div><b>${rp(pf.eac)}</b><span>Forecast cost (EAC)</span></div>
+        <div><b>${pct(pf.forecast_margin)}</b><span>Forecast margin (termasuk overhead)</span></div>
+        <div><b>${rp(pf.ar_outstanding)}</b><span>Piutang (AR)</span></div>
+        <div><b class="${num(pf.ar_overdue)>0?'c-red':''}">${rp(pf.ar_overdue)}</b><span>Piutang lewat jatuh tempo</span></div>
+      </div></div>` : ""}
+    <div class="grid2">
+      <div class="panel"><h2>Perlu perhatian</h2>
+        ${DASH.alerts.length ? DASH.alerts.map(a => `<div class="alert"><div class="dot bg-${a.severity==='high'?'red':a.severity==='medium'?'amber':'grey'}"></div>
+          <div><b>${esc(a.project_code)}</b> ${esc(a.message)}<div class="muted small">Untuk: ${a.notify.join(", ")}</div></div></div>`).join("")
+          : '<div class="empty">Tidak ada peringatan. Semua project dalam batas aman.</div>'}
+      </div>
+      <div class="panel"><h2>Kesehatan project</h2><div class="scroll"><table>
+        <tr><th>Project</th><th class="n">Progress</th><th class="n">CPI</th><th class="n">SPI</th><th class="n">Budget terpakai</th><th class="n">EAC</th></tr>
+        ${DASH.projects.map(p => `<tr><td class="nw"><span class="sw bg-${p.health}"></span><a href="#" data-id="${p.id}" class="plink">${esc(p.code)}</a></td>
+          <td class="n">${ix(p.progress_pct)}%</td><td class="n c-${hcls(num(p.cpi))}">${ix(p.cpi)}</td><td class="n c-${hcls(num(p.spi))}">${ix(p.spi)}</td>
+          <td class="n">${p.budget_burn_pct!=null?ix(p.budget_burn_pct)+"%":"–"}</td><td class="n">${rp(p.eac)}</td></tr>`).join("")}
+      </table></div></div>
+    </div>`;
+  m.querySelectorAll(".plink").forEach(a => a.onclick = e => { e.preventDefault(); openProject(+a.dataset.id); });
+}
+
+// ---------- Project ----------
+let P = null;
+async function openProject(id) {
+  killCharts(); markActive(id);
+  const m = $("#main"); m.innerHTML = '<div class="empty">Memuat…</div>';
+  const card = DASH.projects.find(p => p.id === id);
+  P = {id, card};
+  try {
+    P.evm = await api(`/api/projects/${id}/evm`);
+  } catch (e) {
+    if (e.status !== 409) { m.innerHTML = `<div class="panel">${esc(e.message)}</div>`; return; }
+    m.innerHTML = `<div class="panel"><h2>${esc(card.code)} — ${esc(card.name)}</h2>
+      <p>Project ini belum punya baseline, jadi EVM belum bisa dihitung. Baseline dibekukan dari budget yang sudah di-approve.</p>
+      ${canManage()?'<button id="mkBl">Bekukan baseline</button>':''}<p class="small muted" id="blMsg"></p></div>`;
+    const b = $("#mkBl"); if (b) b.onclick = async () => {
+      try { await post(`/api/projects/${id}/baseline`, {reason:"Baseline awal"}); toast("Baseline dibuat"); await loadDash(); openProject(id); }
+      catch (err) { $("#blMsg").textContent = err.message; } };
+    return;
+  }
+  const [curve, risks, crs] = await Promise.all([
+    api(`/api/projects/${id}/evm/curve`), api(`/api/projects/${id}/risks`), api(`/api/projects/${id}/change-requests`)]);
+  Object.assign(P, {curve, risks, crs});
+  renderProject();
+}
+
+function renderProject() {
+  const {evm: e, card, curve} = P;
+  const f = e.forecasts;
+  $("#main").innerHTML = `
+    <div class="row" style="justify-content:space-between">
+      <div><h2>${esc(card.code)} — ${esc(card.name)}</h2>
+        <div class="muted small">Baseline v${e.baseline_version} · data per ${e.as_of} · progress ${ix(card.progress_pct)}% · selesai ${card.end_date||"–"}</div></div>
+      ${canManage()?'<button id="snap" class="ghost">Simpan snapshot EVM</button>':''}
+    </div>
+    <div class="perf">
+      <div class="ix"><div class="v c-${hcls(num(e.cpi))}">${ix(e.cpi)}</div><div class="l">CPI — efisiensi biaya</div></div>
+      <div class="ix"><div class="v c-${hcls(num(e.spi))}">${ix(e.spi)}</div><div class="l">SPI — kecepatan jadwal</div></div>
+      <div class="kv">
+        <div><b>${rp(e.bac)}</b><span>BAC</span></div><div><b>${rp(e.pv)}</b><span>PV (rencana)</span></div>
+        <div><b>${rp(e.ev)}</b><span>EV (dicapai)</span></div><div><b>${rp(e.ac)}</b><span>AC (aktual)</span></div>
+        <div><b class="${num(e.cv)<0?'c-red':''}">${rp(e.cv)}</b><span>Cost variance</span></div>
+        <div><b class="${num(e.sv)<0?'c-red':''}">${rp(e.sv)}</b><span>Schedule variance</span></div>
+        <div><b>${rp(e.eac)}</b><span>EAC (BAC/CPI)</span></div>
+        <div><b class="${num(e.vac)<0?'c-red':''}">${rp(e.vac)}</b><span>VAC</span></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h3>Kurva S: rencana vs dicapai vs aktual</h3><canvas id="cS" height="230"></canvas></div>
+      <div class="panel"><h3>Tren CPI & SPI dari snapshot</h3>${curve.trend.length?'<canvas id="cT" height="230"></canvas>':'<div class="empty">Belum ada snapshot. Simpan snapshot berkala untuk melihat tren.</div>'}</div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h3>EVM per WBS</h3><div class="scroll"><table>
+        <tr><th>WBS</th><th class="n">BAC</th><th class="n">EV</th><th class="n">AC</th><th class="n">CPI</th><th class="n">SPI</th></tr>
+        ${e.by_wbs.map(w=>`<tr><td style="padding-left:${10+(w.code?(w.code.split('.').length-1)*16:0)}px"><span class="sw bg-${w.health}"></span>${esc(w.code||"")} ${esc(w.name)}</td>
+        <td class="n">${rp(w.bac)}</td><td class="n">${rp(w.ev)}</td><td class="n">${rp(w.ac)}</td>
+        <td class="n c-${hcls(num(w.cpi))}">${ix(w.cpi)}</td><td class="n c-${hcls(num(w.spi))}">${ix(w.spi)}</td></tr>`).join("")}
+      </table></div></div>
+      <div class="panel"><h3>Forecast biaya akhir — per metode</h3><div class="scroll"><table>
+        <tr><th>Metode</th><th class="n">EAC</th><th class="n">ETC</th><th class="n">VAC</th></tr>
+        ${Object.entries(f).map(([k,v])=>`<tr><td>${esc(v.formula)}${v.note?`<div class="muted small">${esc(v.note)}</div>`:''}</td>
+        <td class="n">${rp(v.eac)}</td><td class="n">${rp(v.etc)}</td><td class="n ${num(v.vac)<0?'c-red':''}">${rp(v.vac)}</td></tr>`).join("")}
+      </table></div><p class="small muted">TCPI (efisiensi yang dibutuhkan untuk selesai sesuai BAC): <b>${ix(e.tcpi)}</b></p></div>
+    </div>
+    <div class="panel">
+      <div class="tabs" role="tablist">
+        <button class="on" data-t="risk">Risiko (${P.risks.length})</button>
+        <button data-t="cr">Change request (${P.crs.length})</button>
+        ${canManage()?'<button data-t="whatif">Simulasi dampak</button>':''}
+        <button data-t="est">Estimasi & BOQ</button>
+        <button data-t="fin">Keuangan</button>
+      </div>
+      <div id="tabBody"></div>
+    </div>`;
+  const s = $("#snap"); if (s) s.onclick = async () => { await post(`/api/projects/${P.id}/evm/snapshots`, {}); toast("Snapshot tersimpan"); openProject(P.id); };
+  document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+    document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b)); tab(b.dataset.t); });
+  drawCharts(); tab("risk");
+}
+
+function drawCharts() {
+  if (!window.Chart) { document.querySelectorAll("canvas").forEach(c => c.outerHTML = '<div class="empty">Grafik butuh koneksi internet (Chart.js dari CDN).</div>'); return; }
+  const pts = P.curve.points, labels = pts.map(p => p.date);
+  const base = {responsive:true, interaction:{mode:"index",intersect:false},
+    plugins:{legend:{labels:{usePointStyle:true,boxWidth:8}}, tooltip:{callbacks:{label:c=>c.dataset.label+": "+(c.dataset.fmt?c.dataset.fmt(c.raw):rp(c.raw))}}},
+    scales:{x:{ticks:{maxTicksLimit:8}},y:{ticks:{callback:v=>rp(v)}}}};
+  const ds = (label, key, color, dash) => ({label, data: pts.map(p => p[key]==null?null:Number(p[key])), borderColor:color, backgroundColor:color,
+    borderDash:dash||[], spanGaps:true, pointRadius:0, borderWidth:2.5, tension:.2});
+  const today = P.curve.today;
+  charts.push(new Chart($("#cS"), {type:"line", data:{labels, datasets:[
+    ds("PV rencana","pv","#3563C9",[6,4]), ds("EV dicapai","ev","#0F8A6C"), ds("AC aktual","ac","#D2553A"),
+    {label:"BAC", data: labels.map(()=>Number(P.curve.bac)), borderColor:"#8B97A5", borderWidth:1, pointRadius:0, borderDash:[2,3]}]},
+    options: {...base, plugins:{...base.plugins, title:{display:true, text:"Hari ini: "+today, align:"end", font:{weight:"normal"}}}}}));
+  if (P.curve.trend.length) {
+    const t = P.curve.trend;
+    charts.push(new Chart($("#cT"), {type:"line", data:{labels:t.map(x=>x.date), datasets:[
+      {label:"CPI", data:t.map(x=>num(x.cpi)), borderColor:"#0F8A6C", backgroundColor:"#0F8A6C", fmt:ix, tension:.2},
+      {label:"SPI", data:t.map(x=>num(x.spi)), borderColor:"#3563C9", backgroundColor:"#3563C9", fmt:ix, tension:.2},
+      {label:"Batas 0,90", data:t.map(()=>.9), borderColor:"#C23B3B", borderDash:[4,4], pointRadius:0, borderWidth:1, fmt:ix}]},
+      options:{...base, scales:{y:{suggestedMin:.6, suggestedMax:1.2, ticks:{callback:v=>ix(v)}}}}}));
+  }
+}
+
+// ---------- Tabs ----------
+function tab(t) {
+  const b = $("#tabBody");
+  if (t === "risk") {
+    b.innerHTML = `${P.risks.length ? `<div class="scroll"><table><tr><th>Kode</th><th>Risiko</th><th class="n">P×I</th><th>Level</th><th>Mitigasi</th><th>Status</th></tr>
+      ${P.risks.map(r=>`<tr><td class="nw">${r.code}</td><td>${esc(r.title)}</td><td class="n">${r.probability}×${r.impact}=${r.score}</td>
+      <td><span class="pill bg-${r.level==='critical'||r.level==='high'?'red':r.level==='medium'?'amber':'green'}">${r.level}</span></td>
+      <td class="small">${esc(r.mitigation||"–")}</td><td>${r.status}</td></tr>`).join("")}</table></div>`
+      : '<div class="empty">Belum ada risiko tercatat.</div>'}
+      ${canManage()?`<h3 style="margin-top:18px">Catat risiko baru</h3><div class="row" style="margin-top:8px">
+        <div style="flex:2 1 240px"><label for="rT">Risiko</label><input id="rT" placeholder="Contoh: API vendor kamera berubah"></div>
+        <div style="flex:0 1 90px"><label for="rP">Peluang 1–5</label><input id="rP" type="number" min="1" max="5" value="3"></div>
+        <div style="flex:0 1 90px"><label for="rI">Dampak 1–5</label><input id="rI" type="number" min="1" max="5" value="3"></div>
+        <div style="flex:2 1 240px"><label for="rM">Mitigasi</label><input id="rM"></div>
+        <button id="rAdd">Catat risiko</button></div><p class="small" id="rMsg"></p>`:''}`;
+    const a = $("#rAdd"); if (a) a.onclick = async () => {
+      try { await post(`/api/projects/${P.id}/risks`, {title:$("#rT").value, probability:+$("#rP").value, impact:+$("#rI").value, mitigation:$("#rM").value||null});
+            toast("Risiko dicatat"); P.risks = await api(`/api/projects/${P.id}/risks`); renderProject(); }
+      catch (e) { $("#rMsg").textContent = e.message; } };
+  }
+  if (t === "cr") {
+    b.innerHTML = P.crs.length ? `<div class="scroll"><table><tr><th>Kode</th><th>Perubahan</th><th class="n">MD</th><th class="n">Biaya</th><th class="n">Hari</th><th class="n">Revenue</th><th>Status</th><th></th></tr>
+      ${P.crs.map(c=>`<tr><td class="nw">${c.code}</td><td>${esc(c.title)}<div class="muted small">${esc(c.requested_by||"")}</div></td>
+      <td class="n">${Number(c.md_impact)}</td><td class="n">${rp(c.cost_impact)}</td><td class="n">${c.schedule_impact_days}</td><td class="n">${rp(c.revenue_delta)}</td>
+      <td>${c.status}</td><td style="white-space:nowrap">
+        ${c.status==='draft'&&canManage()?`<button class="ghost" data-a="submit" data-id="${c.id}">Ajukan</button>`:''}
+        ${c.status==='submitted'&&canApproveCR()?`<button data-a="approve" data-id="${c.id}">Setujui</button> <button class="danger" data-a="reject" data-id="${c.id}">Tolak</button>`:''}
+      </td></tr>`).join("")}</table></div><p class="small" id="crMsg"></p>`
+      : '<div class="empty">Belum ada change request. Gunakan tab Simulasi dampak untuk menghitung lalu mengajukan perubahan.</div>';
+    b.querySelectorAll("button[data-a]").forEach(btn => btn.onclick = async () => {
+      const a = btn.dataset.a; let body = {};
+      if (a === "reject") { const r = prompt("Alasan penolakan:"); if (!r) return; body = {reason:r}; }
+      try { await post(`/api/change-requests/${btn.dataset.id}/${a}`, body);
+            toast(a==="approve"?"CR disetujui, baseline diperbarui":a==="reject"?"CR ditolak":"CR diajukan");
+            await loadDash(); openProject(P.id); }
+      catch (e) { $("#crMsg").textContent = e.message; } });
+  }
+  if (t === "whatif") whatIf(b);
+  if (t === "fin") financeTab(b);
+  if (t === "est") estimateTab(b);
+}
+
+async function whatIf(b) {
+  b.innerHTML = '<div class="empty">Memuat…</div>';
+  const [members, emps, tree] = await Promise.all([api(`/api/projects/${P.id}/members`), api("/api/employees"), api(`/api/projects/${P.id}/wbs`)]);
+  const en = Object.fromEntries(emps.map(e => [e.id, e]));
+  const flat = []; (function walk(ns, d){ ns.forEach(n => { flat.push({...n, d}); walk(n.children, d+1); }); })(tree, 0);
+  b.innerHTML = `<p class="muted small" style="margin-top:0">Hitung dampak perubahan scope sebelum diajukan. Tidak ada data yang tersimpan sampai Anda menekan "Ajukan sebagai CR".</p>
+    <div class="row">
+      <div style="flex:2 1 220px"><label for="wT">Judul perubahan</label><input id="wT" value="Tambahan pekerjaan"></div>
+      <div style="flex:1 1 160px"><label for="wE">Resource</label><select id="wE">${members.map(m=>`<option value="${m.employee_id}">${esc(en[m.employee_id]?.name)} (${esc(en[m.employee_id]?.job_role)})</option>`).join("")}</select></div>
+      <div style="flex:1 1 180px"><label for="wW">WBS</label><select id="wW">${flat.map(w=>`<option value="${w.id}">${"  ".repeat(w.d)}${esc(w.code)} ${esc(w.name)}</option>`).join("")}</select></div>
+      <div style="flex:0 1 100px"><label for="wM">Tambahan MD</label><input id="wM" type="number" min="0" step="0.5" value="20"></div>
+      <div style="flex:0 1 110px"><label for="wD">Mundur (hari)</label><input id="wD" type="number" min="0" value="14"></div>
+      <div style="flex:1 1 150px"><label for="wR">Tambahan revenue (Rp)</label><input id="wR" type="number" min="0" value="0"></div>
+      <button id="wRun">Hitung dampak</button>
+    </div><div id="wOut"></div>`;
+  const body = () => ({title: $("#wT").value, requested_by: "Simulasi dashboard", schedule_impact_days: +$("#wD").value || 0,
+    revenue_delta: +$("#wR").value || 0, lines: +$("#wM").value > 0 ? [{line_type:"add_task", wbs_id:+$("#wW").value,
+    name:$("#wT").value, employee_id:+$("#wE").value, md_delta:+$("#wM").value}] : []});
+  $("#wRun").onclick = async () => {
+    const out = $("#wOut");
+    try {
+      const i = await post(`/api/projects/${P.id}/change-requests/preview`, body());
+      out.innerHTML = `<div class="impact">
+        <div><span class="small muted">Tambahan MD</span><b>${Number(i.md_impact)} MD</b></div>
+        <div><span class="small muted">Tambahan biaya</span><b>${rp(i.cost_impact, true)}</b></div>
+        <div><span class="small muted">BAC</span><b>${rp(i.baseline.bac_before)} → ${rp(i.baseline.bac_after)}</b></div>
+        <div><span class="small muted">Tanggal selesai</span><b>${i.schedule.end_date_before} → ${i.schedule.end_date_after}</b></div>
+        <div><span class="small muted">Forecast EAC</span><b>${rp(i.forecast.eac_before)} → ${rp(i.forecast.eac_after)}</b></div>
+        <div><span class="small muted">Margin rencana</span><b>${pct(i.margin.planned_before)} → ${pct(i.margin.planned_after)}</b></div>
+        <div><span class="small muted">Forecast margin</span><b>${pct(i.margin.forecast_before)} → ${pct(i.margin.forecast_after)}</b></div>
+        <div><span class="small muted">Target margin</span><b>${pct(i.margin.target)}</b></div>
+      </div>${i.flags.map(f=>`<div class="flag">${esc(f)}</div>`).join("")}
+      <p class="small muted">${esc(i.forecast.method)}. ${esc(i.margin.basis)}.</p>
+      <button id="wSave">Ajukan sebagai CR</button>`;
+      $("#wSave").onclick = async () => {
+        const cr = await post(`/api/projects/${P.id}/change-requests`, body());
+        await post(`/api/change-requests/${cr.id}/submit`); toast(cr.code + " diajukan untuk approval");
+        P.crs = await api(`/api/projects/${P.id}/change-requests`); await loadDash(); renderProject();
+        document.querySelector('.tabs button[data-t="cr"]').click();
+      };
+    } catch (e) { out.innerHTML = `<p class="flag">${esc(e.message)}</p>`; }
+  };
+}
+
+
+// ---------- Keuangan (Tahap 3) ----------
+const chip = st => `<span class="chip ${st}">${esc(st.replaceAll("_"," "))}</span>`;
+async function financeTab(b) {
+  b.innerHTML = '<div class="empty">Memuat…</div>';
+  const safe = pr => pr.catch(e => ({__err: e}));
+  const [prof, cf, quotes, ms, invs, ctr] = await Promise.all([
+    safe(api(`/api/projects/${P.id}/profitability`)), safe(api(`/api/projects/${P.id}/cashflow`)),
+    safe(api(`/api/quotations?project_id=${P.id}`)), safe(api(`/api/projects/${P.id}/milestones`)),
+    safe(api(`/api/invoices?project_id=${P.id}`)), safe(api(`/api/projects/${P.id}/contract`))]);
+  if (prof.__err) { b.innerHTML = `<div class="empty">${esc(prof.__err.message)}</div>`; return; }
+  const L = [["planned","Rencana (quotation)"],["baseline","Baseline"],["actual","Aktual s.d. hari ini"],["forecast","Forecast akhir"]];
+  const cell = (k, f, cls) => `<td class="n ${cls||''}">${prof[k] ? f(prof[k]) : "–"}</td>`;
+  const accepted = !quotes.__err && quotes.some(q => q.status === "accepted");
+  b.innerHTML = `
+    <h3>Profitabilitas</h3>
+    <div class="scroll"><table class="lens"><tr><th></th>${L.map(([k,l])=>`<th class="n">${l}</th>`).join("")}</tr>
+      <tr><td class="l">Revenue</td>${L.map(([k])=>cell(k,x=>rp(x.revenue))).join("")}</tr>
+      <tr><td class="l">Biaya project</td>${L.map(([k])=>cell(k,x=>rp(x.cost_excl_overhead))).join("")}</tr>
+      <tr><td class="l">Overhead ${pct(prof.overhead_pct)}</td>${L.map(([k])=>cell(k,x=>rp(x.overhead))).join("")}</tr>
+      <tr><td class="l">Gross profit</td>${L.map(([k])=>cell(k,x=>rp(x.gross_profit),prof[k]&&num(prof[k].gross_profit)<0?'c-red':'')).join("")}</tr>
+      <tr><td class="l"><b>Margin</b> (target ${pct(prof.target_margin)})</td>${L.map(([k])=>cell(k,x=>`<b>${pct(x.margin)}</b>`,prof[k]&&prof[k].below_target?'c-red':'c-green')).join("")}</tr>
+    </table></div>
+    <p class="small muted">Aktual memakai revenue diakui sesuai % penyelesaian (EV/BAC). Sudah ditagih ${rp(prof.actual.invoiced_revenue)}, kas diterima ${rp(prof.actual.cash_collected)}.</p>
+
+    <h3 class="sub">Arus kas</h3>
+    ${cf.__err ? `<p class="muted">${esc(cf.__err.message)}</p>` : `
+      <div class="row small" style="gap:24px;margin-bottom:8px"><span>Posisi kas project: <b>${rp(cf.cash_position)}</b></span>
+      <span>Titik terendah: <b class="${cf.lowest_cumulative&&num(cf.lowest_cumulative.cumulative)<0?'c-red':''}">${cf.lowest_cumulative?rp(cf.lowest_cumulative.cumulative)+" ("+cf.lowest_cumulative.month+")":"–"}</b></span></div>
+      <canvas id="cCF" height="110"></canvas><p class="small muted">${esc(cf.notes)}</p>`}
+
+    <h3 class="sub">Penawaran</h3>
+    ${quotes.__err ? `<p class="muted">${esc(quotes.__err.message)}</p>` : quotes.length ? `<div class="scroll"><table>
+      <tr><th>Kode</th><th class="n">Total cost</th><th class="n">Harga (sblm pajak)</th><th class="n">Margin</th><th class="n">Total + PPN</th><th>Status</th><th></th></tr>
+      ${quotes.map(q=>`<tr><td class="nw">${esc(q.code)} v${q.version}</td><td class="n">${rp(q.total_cost)}</td>
+        <td class="n">${rp(q.subtotal)}${num(q.discount)>0?`<div class="small muted">diskon ${rp(q.discount)}</div>`:''}</td>
+        <td class="n ${num(q.margin)<num(q.target_margin)?'c-red':''}">${pct(q.margin)}</td><td class="n">${rp(q.total)}</td>
+        <td>${chip(q.status)}${q.requires_management&&q.status.startsWith("pending")?'<div class="small muted">perlu management</div>':''}</td>
+        <td style="white-space:nowrap"><button class="ghost" data-qd="${q.id}">Rincian</button> <button class="ghost" data-qp="${q.id}">Cetak</button> ${quoteActions(q, ctr)}</td></tr>
+        <tr class="hidden" id="qd${q.id}"><td colspan="7">${quoteDetail(q)}</td></tr>`).join("")}</table></div>` : '<p class="muted small">Belum ada penawaran.</p>'}
+    ${!accepted && canSell() ? `<div class="row" style="margin-top:10px">
+      <div style="flex:0 1 130px"><label for="qM">Target margin %</label><input id="qM" type="number" step="0.5" value="${prof.target_margin?Number(prof.target_margin)*100:30}"></div>
+      <div style="flex:0 1 130px"><label for="qPm">Margin barang %</label><input id="qPm" type="number" step="0.5" placeholder="= jasa"></div>
+      <div style="flex:0 1 170px"><label for="qD">Diskon (Rp)</label><input id="qD" type="number" min="0" value="0"></div>
+      <div style="flex:1 1 220px"><label for="qT">Judul penawaran</label><input id="qT" value="${esc(P.card.name)}"></div>
+      <button id="qNew">Hitung & buat penawaran</button></div>` : ''}
+    <p class="small" id="finMsg"></p>
+
+    ${ctr.__err ? '' : `<h3 class="sub">Termin tagihan — kontrak ${esc(ctr.contract_no)} (${rp(ctr.contract_value)}, termin ${ctr.payment_term_days} hari)</h3>
+    <div class="scroll"><table><tr><th>#</th><th>Termin</th><th class="n">Nilai</th><th>Rencana</th><th>Status</th><th></th></tr>
+      ${ms.map(m=>`<tr><td>${m.seq}</td><td>${esc(m.name)}${m.change_request_id?' <span class="chip">change order</span>':''}${m.task_id?'<div class="small muted">syarat: task selesai</div>':''}</td>
+        <td class="n">${rp(m.amount)}</td><td>${m.planned_date||"–"}</td><td>${chip(m.status)}</td>
+        <td>${m.status==="planned"&&canFin()?`<button class="ghost" data-bill="${m.id}">Terbitkan invoice</button>`:''}</td></tr>`).join("")}
+    </table></div>`}
+
+    ${invs.__err ? '' : invs.length ? `<h3 class="sub">Invoice</h3><div class="scroll"><table>
+      <tr><th>No.</th><th>Terbit</th><th>Jatuh tempo</th><th class="n">Total</th><th class="n">Sisa</th><th>Status</th><th></th></tr>
+      ${invs.map(i=>`<tr><td class="nw">${esc(i.invoice_no||"draft")}</td><td>${i.issue_date||"–"}</td><td>${i.due_date||"–"}</td>
+        <td class="n">${rp(i.total)}<div class="small muted">PPN ${rp(i.vat_amount)} · PPh ${rp(i.wht_amount)}</div></td>
+        <td class="n">${rp(i.outstanding)}</td><td>${chip(i.display_status)}${i.days_past_due>0?`<div class="small c-red">${i.days_past_due} hari</div>`:''}</td>
+        <td>${canFin()&&["issued","partially_paid"].includes(i.status)?`<button class="ghost" data-pay="${i.id}">Catat pembayaran</button>`:''}
+            ${canFin()&&i.status==="draft"?`<button class="ghost" data-issue="${i.id}">Terbitkan</button>`:''}</td></tr>`).join("")}
+    </table></div>` : ''}`;
+
+  if (!cf.__err && window.Chart) {
+    const m = cf.months, lab = m.map(x => x.month);
+    charts.push(new Chart($("#cCF"), {data:{labels:lab, datasets:[
+      {type:"bar", label:"Kas masuk", data:m.map(x=>num(x.cash_in)), backgroundColor:"#0F8A6C", stack:"in"},
+      {type:"bar", label:"Perkiraan masuk", data:m.map(x=>num(x.forecast_cash_in)), backgroundColor:"rgba(15,138,108,.35)", stack:"in"},
+      {type:"bar", label:"Kas keluar", data:m.map(x=>-(num(x.cash_out_labor)+num(x.cash_out_expense))), backgroundColor:"#D2553A", stack:"out"},
+      {type:"bar", label:"Perkiraan keluar", data:m.map(x=>-num(x.forecast_cash_out)), backgroundColor:"rgba(210,85,58,.35)", stack:"out"},
+      {type:"line", label:"Kumulatif", data:m.map(x=>num(x.cumulative)), borderColor:"#13233A", backgroundColor:"#13233A", tension:0, pointRadius:3}]},
+      options:{responsive:true, interaction:{mode:"index",intersect:false},
+        plugins:{legend:{labels:{usePointStyle:true,boxWidth:8}}, tooltip:{callbacks:{label:c=>c.dataset.label+": "+rp(c.raw)}}},
+        scales:{x:{stacked:true}, y:{stacked:false, ticks:{callback:v=>rp(v)}}}}}));
+  }
+  const msg = t => { $("#finMsg").textContent = t; };
+  b.querySelectorAll("button[data-qd]").forEach(x => x.onclick = () => $("#qd" + x.dataset.qd).classList.toggle("hidden"));
+  b.querySelectorAll("button[data-qp]").forEach(x => x.onclick = () => printQuote(quotes.find(q => q.id === +x.dataset.qp)));
+  const reload = async t => { toast(t); await loadDash(); financeTab(b); };
+  const qn = $("#qNew"); if (qn) qn.onclick = async () => {
+    try { const q = await post("/api/quotations", {project_id:P.id, title:$("#qT").value,
+            target_margin:(+$("#qM").value)/100, discount:+$("#qD").value||0,
+            ...($("#qPm").value !== "" ? {procurement_margin:(+$("#qPm").value)/100} : {})});
+          reload(`${q.code} v${q.version} dibuat — harga ${rp(q.subtotal)}, margin ${pct(q.margin)}`); }
+    catch (e) { msg(e.message); } };
+  b.querySelectorAll("button[data-qa]").forEach(btn => btn.onclick = async () => {
+    const [a, id] = [btn.dataset.qa, btn.dataset.id]; let body = {};
+    try {
+      if (a === "reject") { const r = prompt("Alasan penolakan:"); if (!r) return; body = {reason:r}; }
+      if (a === "contract") {
+        const no = prompt("Nomor kontrak:"); if (!no) return;
+        const dt = prompt("Tanggal tanda tangan (YYYY-MM-DD):", new Date().toISOString().slice(0,10)); if (!dt) return;
+        await post("/api/contracts", {quotation_id:+id, contract_no:no, signed_date:dt}); return reload("Kontrak dibuat, termin tagihan siap");
+      }
+      await post(`/api/quotations/${id}/${a}`, body); reload("Penawaran diperbarui");
+    } catch (e) { msg(e.message); } });
+  b.querySelectorAll("button[data-bill]").forEach(btn => btn.onclick = async () => {
+    try {
+      let inv;
+      try { inv = await api("/api/invoices/from-milestone", {method:"POST", headers:{"Idempotency-Key": "ms-"+btn.dataset.bill+"-"+Date.now()},
+                            body: JSON.stringify({milestone_id:+btn.dataset.bill})}); }
+      catch (e) {
+        if (e.status !== 422 || !confirm(e.message + "\n\nTetap tagih sekarang? (tercatat di audit log)")) throw e;
+        inv = await post("/api/invoices/from-milestone", {milestone_id:+btn.dataset.bill, force:true});
+      }
+      inv = await post(`/api/invoices/${inv.id}/issue`, {});
+      reload(`${inv.invoice_no} terbit — ${rp(inv.total, true)}, jatuh tempo ${inv.due_date}`);
+    } catch (e) { msg(e.message); } });
+  b.querySelectorAll("button[data-issue]").forEach(btn => btn.onclick = async () => {
+    try { const inv = await post(`/api/invoices/${btn.dataset.issue}/issue`, {}); reload(`${inv.invoice_no} terbit`); }
+    catch (e) { msg(e.message); } });
+  b.querySelectorAll("button[data-pay]").forEach(btn => btn.onclick = async () => {
+    const i = invs.find(x => x.id === +btn.dataset.pay);
+    const wht = num(i.settled) === 0 ? num(i.wht_amount) : 0;
+    const amt = prompt(`Kas diterima (Rp). Sisa tagihan ${rp(i.outstanding, true)}` + (wht ? `, PPh dipotong ${rp(wht, true)} dicatat otomatis.` : "."),
+                       String(Math.round(num(i.outstanding) - wht)));
+    if (!amt) return;
+    try { await api("/api/payments", {method:"POST", headers:{"Idempotency-Key": "pay-"+i.id+"-"+Date.now()},
+            body: JSON.stringify({invoice_id:i.id, payment_date:new Date().toISOString().slice(0,10), amount:+amt, wht_amount:wht})});
+          reload("Pembayaran dicatat"); }
+    catch (e) { msg(e.message); } });
+}
+function quoteActions(q, ctr) {
+  const r = ME.role, out = [];
+  const btn = (a, label, cls) => out.push(`<button class="${cls||'ghost'}" data-qa="${a}" data-id="${q.id}">${label}</button>`);
+  if (q.status === "draft" && canSell()) btn("submit", "Ajukan");
+  if (q.status === "pending_finance" && ["admin","finance"].includes(r)) { btn("approve", "Setujui", " "); btn("reject", "Tolak", "danger"); }
+  if (q.status === "pending_management" && ["admin","management"].includes(r)) { btn("approve", "Setujui", " "); btn("reject", "Tolak", "danger"); }
+  if (q.status === "approved" && canSell()) btn("send", "Tandai terkirim");
+  if (["approved","sent"].includes(q.status) && canSell()) btn("accept", "Diterima klien", " ");
+  if (q.status === "accepted" && ctr.__err && ["admin","management","sales","finance"].includes(r)) btn("contract", "Buat kontrak", " ");
+  return out.join(" ");
+}
+
+// ---------- Estimasi & BOQ (Tahap 3b) ----------
+const EST = {tm: null, pm: "", cont: 10, disc: 0};
+async function estimateTab(b) {
+  if (EST.pid !== P.id) Object.assign(EST, {pid: P.id, tm: null, pm: "", cont: 10, disc: 0});
+  const qs = new URLSearchParams({contingency_pct: EST.cont/100, discount: EST.disc||0});
+  if (EST.tm !== null) qs.set("target_margin", EST.tm/100);
+  if (EST.pm !== "") qs.set("procurement_margin", EST.pm/100);
+  let e, catalog = [], items = [];
+  try { [e, catalog, items] = await Promise.all([api(`/api/projects/${P.id}/estimate?${qs}`),
+          api("/api/catalog").catch(()=>[]), api(`/api/projects/${P.id}/procurements`)]); }
+  catch (err) { b.innerHTML = `<div class="empty">${esc(err.message)}</div>`; return; }
+  if (EST.tm === null && e.target_margin != null) EST.tm = +(num(e.target_margin)*100).toFixed(2);
+  const edit = canManage();
+  const itemById = Object.fromEntries(items.map(i => [i.id, i]));
+  const flat = []; (function walk(ns, d){ ns.forEach(n => { flat.push({...n, d}); walk(n.children, d+1); }); })(e.tree||[], 0);
+  const rows = flat.filter(n => num(n.direct_cost) > 0 || n.lines.length).map(n => {
+    const pad = 10 + n.d*18;
+    const head = `<tr class="w"><td style="padding-left:${pad}px">${esc(n.code)} ${esc(n.name)}</td><td class="n">${num(n.md)?Number(n.md)+" MD":""}</td><td></td><td></td>
+      <td class="n">${rp(n.direct_cost)}</td><td class="n">${rp(n.price)}</td><td></td></tr>`;
+    const lines = n.lines.map(l => {
+      const it = l.procurement_item_id ? itemById[l.procurement_item_id] : null;
+      const editable = edit && ((l.kind === "service") || (it && it.status === "planned"));
+      const qty = editable ? `<input class="cell" type="number" min="0" step="any" value="${Number(l.qty)}" data-${l.kind==="service"?"md":"qty"}="${l.task_id||l.procurement_item_id}">` : Number(l.qty).toLocaleString("id-ID");
+      const uc = editable && l.kind === "procurement" ? `<input class="cell" type="number" min="0" step="any" value="${Number(l.unit_cost)}" data-uc="${l.procurement_item_id}" style="width:120px">` : rp(l.unit_cost, true);
+      let act = "";
+      if (it && edit) {
+        if (it.status === "planned") act = `<button class="ghost small" data-po="${it.id}">PO</button> <button class="ghost small" data-del="${it.id}" title="Hapus">✕</button>`;
+        else if (it.status === "ordered") act = `<button class="ghost small" data-rcv="${it.id}">Terima</button>`;
+        else act = chip(it.status);
+      }
+      const due = it && it.status === "planned" && it.order_by_date ? `<div class="small ${it.order_by_date < new Date().toISOString().slice(0,10) ? 'c-red':'muted'}">pesan sebelum ${it.order_by_date}</div>` : "";
+      return `<tr><td style="padding-left:${pad+18}px"><span class="kind">${l.kind==="service"?"jasa":"barang"}</span>${esc(l.description)}${due}</td>
+        <td class="n">${qty}</td><td>${esc(l.unit)}</td><td class="n">${uc}</td><td class="n">${rp(l.cost, true)}</td>
+        <td class="n">${rp(l.amount, true)}${l.kind==="procurement"?`<div class="small muted">@ ${rp(l.unit_price, true)}</div>`:""}</td><td style="white-space:nowrap">${act}</td></tr>`;
+    }).join("");
+    return head + lines;
+  }).join("");
+  const wbsOpts = flat.map(w => `<option value="${w.wbs_id}">${"  ".repeat(w.d)}${esc(w.code)} ${esc(w.name)}</option>`).join("");
+  b.innerHTML = `
+    <div class="ctl">
+      <div><label for="eTm">Margin jasa %</label><input id="eTm" type="number" step="0.5" value="${EST.tm ?? 30}"></div>
+      <div><label for="ePm">Margin barang %</label><input id="ePm" type="number" step="0.5" placeholder="= jasa" value="${EST.pm}"></div>
+      <div><label for="eCt">Contingency %</label><input id="eCt" type="number" step="0.5" value="${EST.cont}"></div>
+      <div style="flex:0 1 170px"><label for="eDs">Diskon (Rp)</label><input id="eDs" type="number" min="0" value="${EST.disc}"></div>
+      ${edit ? '<button class="ghost" id="eRef">Perbarui harga dari katalog</button>' : ''}
+    </div>
+    ${e.empty ? `<div class="empty">${esc(e.warnings.join(". "))}</div>` : `
+    <div class="sum">
+      <div><span class="small muted">Total jasa</span><b>${Number(e.total_md).toLocaleString("id-ID")} MD · ${rp(e.service_cost)}</b></div>
+      <div><span class="small muted">Pengadaan</span><b>${rp(e.procurement_cost)}</b></div>
+      <div><span class="small muted">Contingency + overhead</span><b>${rp(num(e.contingency)+num(e.overhead))}</b></div>
+      <div><span class="small muted">Total cost</span><b>${rp(e.total_cost)}</b></div>
+      <div class="hl"><span class="small muted">Harga penawaran</span><b>${rp(e.subtotal, true)}</b></div>
+      <div><span class="small muted">Margin</span><b class="${num(e.margin_after_discount) < num(e.target_margin) ? 'c-amber' : 'c-green'}">${pct(e.margin_after_discount)}</b></div>
+      <div><span class="small muted">Total + PPN</span><b>${rp(e.customer_total)}</b></div>
+    </div>
+    ${e.baseline_note ? `<p class="small c-amber">${esc(e.baseline_note)}</p>` : ''}
+    ${e.warnings.length ? `<p class="small c-red">${e.warnings.map(esc).join("<br>")}</p>` : ''}
+    <div class="scroll"><table class="est"><tr><th>Uraian</th><th class="n">Qty / MD</th><th>Satuan</th><th class="n">Harga beli / rate</th><th class="n">Biaya</th><th class="n">Harga jual</th><th></th></tr>${rows}
+      <tr class="w"><td>Total</td><td></td><td></td><td></td><td class="n">${rp(e.direct_cost, true)}</td><td class="n">${rp(e.list_price, true)}</td><td></td></tr></table></div>
+    <p class="small muted">Harga jual = biaya × beban (contingency ${pct(e.contingency_pct)} + overhead ${pct(e.overhead_pct)}) ÷ (1 − margin), dibulatkan. Ubah angka di kolom Qty/MD atau harga, lalu tekan Enter atau pindah kolom: semua total dihitung ulang.</p>`}
+    ${edit ? `<h3 class="sub">Tambah kebutuhan pengadaan</h3>
+    <div class="row">
+      <div style="flex:1 1 180px"><label for="aW">WBS</label><select id="aW">${wbsOpts}</select></div>
+      <div style="flex:2 1 240px"><label for="aC">Item katalog</label><select id="aC"><option value="">— item manual —</option>
+        ${catalog.map(c=>`<option value="${c.id}">${esc(c.code)} · ${esc(c.name)} (${rp(c.unit_cost, true)}/${esc(c.unit)})</option>`).join("")}</select></div>
+      <div style="flex:0 1 90px"><label for="aQ">Qty</label><input id="aQ" type="number" min="0" step="any" value="1"></div>
+      <div style="flex:0 1 150px"><label for="aD">Dibutuhkan tgl</label><input id="aD" type="date"></div>
+    </div>
+    <div class="row" id="aManual" style="margin-top:8px">
+      <div style="flex:2 1 220px"><label for="aN">Nama item</label><input id="aN"></div>
+      <div style="flex:1 1 150px"><label for="aK">Kategori</label><select id="aK">
+        <option value="hardware">Perangkat</option><option value="software_license">Lisensi software</option>
+        <option value="cloud_subscription">Langganan cloud</option><option value="subcontract">Subkon / vendor</option>
+        <option value="material">Material</option><option value="other">Lainnya</option></select></div>
+      <div style="flex:0 1 90px"><label for="aU">Satuan</label><input id="aU" value="unit"></div>
+      <div style="flex:0 1 150px"><label for="aP">Harga beli</label><input id="aP" type="number" min="0"></div>
+    </div>
+    <div class="row" style="margin-top:8px"><button id="aAdd">Tambah ke BOQ</button><span class="small" id="aMsg"></span></div>` : ''}`;
+
+  const rerun = () => estimateTab(b);
+  const bind = (id, key) => { const el = $(id); if (el) el.onchange = () => { EST[key] = el.value === "" ? "" : +el.value; rerun(); }; };
+  bind("#eTm","tm"); bind("#ePm","pm"); bind("#eCt","cont"); bind("#eDs","disc");
+  const say = t => { const m = $("#aMsg"); if (m) m.textContent = t; else toast(t); };
+  b.querySelectorAll("input[data-qty]").forEach(i => i.onchange = async () => {
+    try { await api(`/api/procurements/${i.dataset.qty}`, {method:"PATCH", body: JSON.stringify({qty:+i.value})}); rerun(); } catch (e) { toast(e.message); } });
+  b.querySelectorAll("input[data-uc]").forEach(i => i.onchange = async () => {
+    try { await api(`/api/procurements/${i.dataset.uc}`, {method:"PATCH", body: JSON.stringify({unit_cost:+i.value})}); rerun(); } catch (e) { toast(e.message); } });
+  b.querySelectorAll("input[data-md]").forEach(i => i.onchange = async () => {
+    try { await api(`/api/tasks/${i.dataset.md}`, {method:"PATCH", body: JSON.stringify({estimate_md:+i.value})}); rerun(); } catch (e) { toast(e.message); } });
+  b.querySelectorAll("button[data-del]").forEach(x => x.onclick = async () => {
+    if (!confirm("Hapus item ini dari BOQ?")) return;
+    try { await api(`/api/procurements/${x.dataset.del}`, {method:"DELETE"}); rerun(); } catch (e) { toast(e.message); } });
+  b.querySelectorAll("button[data-po]").forEach(x => x.onclick = async () => {
+    const it = itemById[+x.dataset.po];
+    const po = prompt(`Nomor PO untuk ${it.name}:`); if (!po) return;
+    const price = prompt("Harga beli aktual per satuan (Rp):", String(Math.round(num(it.unit_cost)))); if (!price) return;
+    try { await post(`/api/procurements/${it.id}/order`, {po_number:po, order_date:new Date().toISOString().slice(0,10), actual_unit_cost:+price});
+          toast("PO dicatat"); rerun(); } catch (e) { toast(e.message); } });
+  b.querySelectorAll("button[data-rcv]").forEach(x => x.onclick = async () => {
+    const dt = prompt("Tanggal barang diterima (YYYY-MM-DD):", new Date().toISOString().slice(0,10)); if (!dt) return;
+    try { await post(`/api/procurements/${x.dataset.rcv}/receive`, {received_date:dt});
+          toast("Barang diterima — biaya diajukan ke Finance untuk approval"); rerun(); } catch (e) { toast(e.message); } });
+  const ref = $("#eRef"); if (ref) ref.onclick = async () => {
+    const r = await post(`/api/projects/${P.id}/procurements/refresh-prices`); toast(`${r.updated} harga item diperbarui`); rerun(); };
+  const sel = $("#aC"); if (sel) { const sync = () => $("#aManual").classList.toggle("hidden", !!sel.value); sel.onchange = sync; sync(); }
+  const add = $("#aAdd"); if (add) add.onclick = async () => {
+    const body = {wbs_id:+$("#aW").value, qty:+$("#aQ").value, need_by_date:$("#aD").value || null};
+    if (sel.value) body.catalog_item_id = +sel.value;
+    else Object.assign(body, {name:$("#aN").value, category:$("#aK").value, unit:$("#aU").value||"unit", unit_cost:+$("#aP").value});
+    try { await post(`/api/projects/${P.id}/procurements`, body); toast("Item ditambahkan ke BOQ"); rerun(); }
+    catch (e) { say(e.message); } };
+}
+
+function quoteDetail(q) {
+  const groups = [];
+  q.lines.forEach(l => { const k = l.wbs_code ? `${l.wbs_code} ${l.wbs_name}` : "Lain-lain";
+    let g = groups.find(x => x.k === k); if (!g) groups.push(g = {k, lines: []}); g.lines.push(l); });
+  return `<table>${groups.map(g => `<tr class="w"><td colspan="4"><b>${esc(g.k)}</b></td><td class="n"><b>${rp(g.lines.reduce((a,l)=>a+num(l.amount),0), true)}</b></td></tr>` +
+    g.lines.map(l => `<tr><td style="padding-left:24px">${esc(l.description)}</td><td class="n">${Number(l.qty).toLocaleString("id-ID")}</td><td>${esc(l.unit)}</td>
+      <td class="n">${rp(l.unit_price, true)}</td><td class="n">${rp(l.amount, true)}</td></tr>`).join("")).join("")}
+    <tr><td colspan="4" class="n">Harga</td><td class="n">${rp(q.list_price, true)}</td></tr>
+    ${num(q.discount) ? `<tr><td colspan="4" class="n">Diskon</td><td class="n">−${rp(q.discount, true)}</td></tr>` : ""}
+    <tr><td colspan="4" class="n">Subtotal (DPP dasar)</td><td class="n">${rp(q.subtotal, true)}</td></tr>
+    <tr><td colspan="4" class="n">PPN ${q.vat_code ? esc(q.vat_code) : ""}</td><td class="n">${rp(q.vat_amount, true)}</td></tr>
+    <tr><td colspan="4" class="n"><b>Total</b></td><td class="n"><b>${rp(q.total, true)}</b></td></tr></table>`;
+}
+function printQuote(q) {
+  const w = window.open("", "_blank"); if (!w) return toast("Izinkan pop-up untuk mencetak");
+  w.document.write(`<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>${esc(q.code)} v${q.version}</title>
+    <style>body{font:13px/1.5 "Public Sans",Arial,sans-serif;color:#13233A;max-width:800px;margin:32px auto;padding:0 24px}
+    h1{font-size:20px;margin:0}table{width:100%;border-collapse:collapse;margin-top:16px}td,th{padding:6px 8px;border-bottom:1px solid #D6DEE6}
+    .n{text-align:right;white-space:nowrap}tr.w td{background:#EEF2F5}.meta{color:#4A5B70}@media print{button{display:none}}</style></head><body>
+    <button onclick="print()">Cetak / simpan PDF</button>
+    <h1>Penawaran Harga ${esc(q.code)} (versi ${q.version})</h1>
+    <p class="meta">${esc(q.title)}<br>Berlaku sampai ${q.valid_until || "-"}</p>
+    ${q.scope ? `<p><b>Lingkup:</b> ${esc(q.scope)}</p>` : ""}
+    ${quoteDetail(q)}
+    <h3>Termin pembayaran</h3><table>${q.terms.map(t => `<tr><td>${t.seq}. ${esc(t.name)}</td><td class="n">${pct(t.pct)}</td><td class="n">${rp(t.amount, true)}</td></tr>`).join("")}</table>
+    ${q.assumptions ? `<p><b>Asumsi:</b> ${esc(q.assumptions)}</p>` : ""}${q.exclusions ? `<p><b>Tidak termasuk:</b> ${esc(q.exclusions)}</p>` : ""}
+    <p class="meta">Harga belum termasuk PPh yang dipotong sesuai ketentuan.</p></body></html>`);
+  w.document.close();
+}
+
+if (TOKEN) boot().catch(logout);
+</script>
+</body>
+</html>
